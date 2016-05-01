@@ -1,0 +1,225 @@
+VFS -- Virtual File System
+==========================
+
+This is a summary of (some of) the main ideas in
+  "Vnodes: An Architecture for Multiple File System Types in Sun UNIX",
+  SR Kleiman
+
+* Design
+  ------
+
+  - Split file system implementation in two layers:
+    * Implementation independent: general data and interface; users do not need 
+      to care about actual implementation (e.g., the actual file system in use)
+    * Implementation dependent:
+
+* Implementation
+  --------------
+
+  - Two main objects: a vfs (virtual file system) and a vnode (a virtual inode, 
+    representing a file)
+
+                       --------------
+                      | System calls |
+                       --------------
+                              |
+                    ---------------------
+                   |     vfs      inode  |
+                   | interface  interface|
+                    ---------------------
+                              |
+           -----------------------------------------
+          |                   |                     |
+        -----                -----                 -----
+       | FAT |              | FFS |               | NFS |
+        -----                -----                 -----
+          |                   |                     |
+       ---------------------------             ------------
+      |          Storage          |           |  Network   |
+       ---------------------------             ------------
+
+* Operation
+  ---------
+
+  - file systems are operated -- mounted, unmounted, etc -- over the
+    "vfs interface"
+  - files manipultion is done through the "vnode interface"; a vnode is a file 
+    "system-independent inode"
+
+  * The vfs interface
+    -----------------
+
+    - Each file system that gets mounted is represented by a vfs object, which 
+      is inserted into a list of mounted file systems. Such an object could be 
+      represented by the following C struct:
+
+      struct vfs {
+          struct vfs        *vfs_next;
+          struct vfsops     *vfs_op;
+          struct vnode      *vfs_vnodecovered;
+          int                vfs_flag;
+          int                vfs_bsize;
+          caddr_t            vfs_data;
+      };
+
+    - nfs_next points to the next vfs in the list; the first is always the
+	  root file system
+    - vfs_data points to file system specific data; it could be, for instance, 
+      a pointer to a mount table entry
+    - vfs_op points to the vector of supported operations for the vfs -- see 
+      struct below
+
+      struct vfsops {
+          int    (*vfs_mount)();
+          int    (*vfs_umount)();
+          int    (*vfs_root)();
+          int    (*vfs_statfs)();
+          int    (*vfs_sync)();
+          int    (*vfs_fid)();
+          int    (*vfs_vget)();
+	  };
+
+    - when a 'mount' call is performed, the corresponding function in vfs_op,
+	  vfs_mount, is performed; if the call succeeds, the vfs object is linked
+	  into the list and the vfs_vnodecovered is set to the vnode of the mount
+	  point
+
+  * The vnode interface
+    -------------------
+
+    - The vnode object and associated operations:
+
+      struct vnode {
+          ushort            v_flag;
+          ushort            v_count;
+          ushort            v_shlockc;
+          ushort            v_exlockc;
+          struct vfs       *v_vfsmountedhere;
+          struct vnodeops  *v_op;
+          union {
+              struct socket *v_Socket;
+              struct stdata *v_Stream;
+          };
+          struct vfs       *v_vfsp;
+          enum vtype        v_type;
+          caddr_t           v_data;
+      };
+
+      enum vtype {VNON, VREG, VDIR, VBLK, VCHR, VLNK, VSOCK, VBAD};
+
+      struct vnodeops {
+          int    (*vn_open)();
+          int    (*vn_close)();
+          int    (*vn_rdwr)();
+          int    (*vn_ioctl)();
+          int    (*vn_select)();
+          int    (*vn_getattr)();
+          int    (*vn_setattr)();
+          int    (*vn_access)();
+          int    (*vn_lookup)();
+          int    (*vn_create)();
+          int    (*vn_remove)();
+          int    (*vn_link)();
+          int    (*vn_rename)();
+          int    (*vn_mkdir)();
+          int    (*vn_rmdir)();
+          int    (*vn_readdir)();
+          int    (*vn_symlink)();
+          int    (*vn_readlink)();
+          int    (*vn_fsync)();
+          int    (*vn_inactive)();
+          int    (*vn_bmap)();
+          int    (*vn_strategy)();
+          int    (*vn_bread)();
+          int    (*vn_brelse)();
+      };
+
+    - The vnode struct contains public data about the file that does not change
+      over the life of the file (e.g., v_type)
+    - Some interesting fields:
+      * v_count is a reference counter; it's maintained through the macros 
+        VN_HOLD and VN_RELE. When the reference counter reaches zero, the
+        operation vn_inactive is called to notify the vnode's file system
+      * v_vfsmountedhere points to the vfs for another file system in case
+        the vnode is a mount point
+      * v_vfsp points to the vfs to which the vnode belongs
+      * v_data points to file system dependent data
+
+
+NetBSD Storage Subsystem
+========================
+
+The NetBSD storage system is roughlt split in
+  - VFS-level code (vnode and vnode interfaces, as described above)
+  - Individual file systems
+  - Code shared by file systems
+  - Lower-level code
+
+* VFS layer overview
+  ==================
+
+  - Vnode interface
+    ===============
+
+    * vnode-related definitions can be found under
+      src/sys/sys/vnode.h; the specifics of vnodes are described in vnode(9)
+    * As noted above, implementations provide two parts of a vnode: its data
+      field and a vector of supported operations
+      - The data field carries any information describing a file inside a file
+        system; it could be, for instance, the representation of an inode
+      - vnode operations are functions that return an integer error status and
+        take a void pointer that carries the operation's arguments
+
+    * An array of 'struct vnodeopv_entry_desc' is used to configure the
+      vector of supported operations; it's defined as
+
+          struct vnodeopv_entry_desc {
+              const struct vnodeop_desc *opve_op;
+              int (*opve_impl)(void *);
+          }
+
+      Its member vnodeop_desc is a struct that describes an operation; it
+      contains, for instance, the offset of the operation in the vector and the
+      name of the operation. Supposing we have functions following the
+      "returns an int, takes a pointer to void" contract, such as
+
+          int myfs_open(void *data) {...}
+          int myfs_close(void *data) {...}
+
+      the vnodeopv_entry_desc struct would be something like
+
+          struct vnodeopv_entry_desc myfs_vnodeopv_desc_entries[] = {
+              {vop_default_desc, vn_default_error},
+              {vop_open_desc, myfs_open},
+              {vop_close_desc, myfs_close},
+              ...
+              {NULL, NULL}
+          };
+
+      This vector is not used directly by the system; its purpose is to map
+      logical operations, such as vop_open, to actual implementation, such as
+      myfs_open. It can list non-standard operations and lack basic ones; it is
+      only required that the first element is an error handling routine (used,
+      for instance, if a non-implemented operation is called) and that the last
+      pair of elements is a pair of NULL pointers.
+
+      This array of vnodeopv_entry_desc is not used directly; it's used by the
+      kernel to fill an array (during filesystem initialization) that follows
+      strict ordering of operations.
+
+          int (**myfs_vnodeop_p)(void *);
+          struct vnodeopv_desc myfs_vnodeopv_desc = {
+              {&myfs_vnodeop_p, myfs_vnodeopv_desc_entries}
+          };
+
+      The kernel fills in myfs_vnodeop_p, establishing the relationship
+      between generic interface operations and implementation defined in
+      myfs_vnodeopv_desc_entries.
+
+    * Standard vnode operations are called through VOP_* macros; for instance,
+      'vn_open' has a corresponding VOP_OPEN, 'vn_close' has a VOP_CLOSE, and
+      so on. The set of operations can be extended by file systems. vnodeops(9)
+      delves into the actual mapping of VOP_* macros to operations
+
+  - The NetBSD VFS interface was not closely examined as it is not directly
+    related to our purposes.
