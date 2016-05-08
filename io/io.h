@@ -1,8 +1,11 @@
 #ifndef _IO_H_
 #define _IO_H_
 
+#include <sys/kauth.h>
+
 typedef struct kfile {
 	struct vnode *vp;
+	kauth_cred_t cred;
 	int mode;
 } KFILE
 

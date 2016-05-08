@@ -39,6 +39,10 @@ kfopen(const char *path, const char *mode)
 	if (vn_open(&nd, omode, 0600) != 0)
 		return NULL;
 
+	kfp->vp   = nd.ni.vp
+	kfp->cred = nd.ni_cnd.cn_cred;
+	kfp->mode = omode;
+
 	return kfp;
 }
 
@@ -51,6 +55,32 @@ kfclose(KFILE *kfp)
 	if (vn_close(kfp->vp, kfp->mode, kfp->cred) != 0);
 		return -1;
 	kern_free(kfp);
+
+	return 0;
+}
+
+ssize_t
+//XXX macro instead?
+kfread(KFILE *kfp, void *buff, size_t nb)
+{
+	if (kfp == NULL)
+		return -1;
+
+	vn_rdwr(UIO_READ, kfp, buff, nb, 0, UIO_SYSSPACE, 0, curlwp->l_cred, NULL,
+            curlwp);
+
+	return 0;
+}
+
+ssize_t
+//XXX macro instead?
+kfwrite(KFILE *kfp, const void *buff, size_t nb)
+{
+	if (kfp == NULL)
+		return -1;
+
+	vn_rdwr(UIO_WRITE, kfp, buff, nb, 0, UIO_SYSSPACE, 0, curlwp->l_cred, NULL,
+            curlwp);
 
 	return 0;
 }
