@@ -1,20 +1,22 @@
-#include <sys/vfs_syscalls.h>
-#include <sys/syscallargs.h>
-#include <sys/lwp.h>
+#include <sys/filedesc.h>
+#include <sys/fcntl.h>
 
 #include "io.h"
 
 int
-kopen(const char *path, int flags)
+kopen(const char *path, int flags, ...)
 {
 	int fd;
-	struct sys_open_args oa;
+	mode_t perms = 666;
+	va_list va;
 
-	SCARG(&oa, path)  = path;
-	SCARG(&oa, flags) = flags;
-	SCARG(&oa, mode)  = 0700;
+	if (flags & O_CREAT) {
+		va_start(va, flags);
+		perms = va_arg(va, mode_t);
+		va_end(va);
+	}
 
-	if (sys_open(curlwp, &oa, &fd))
+	if (fd_open(path, flags, perms, &fd))
 		return -1;
 	return fd;
 }
@@ -22,19 +24,19 @@ kopen(const char *path, int flags)
 int
 kclose(int fd)
 {
-	struct sys_close_args ca;
-	SCARG(&ca, fd) = fd;
-	return sys_close(curlwp, &ca, NULL);
+	if (fd_getfile(fd) == NULL)
+		return EBADF;
+	return fd_close(fd);
 }
 
 ssize_t
-kread(int, void *buf, size_t count)
+kread(int fd, void *buf, size_t count)
 {
 	return 0;
 }
 
 ssize_t
-kwrite(int, const void *buf, size_t count)
+kwrite(int fd, const void *buf, size_t count)
 {
 	return 0;
 }
