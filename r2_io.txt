@@ -140,7 +140,6 @@ of communication -- e.g., datagram or stream-oriented.
 * connect
 * listen
 * accept
-* connect
 * shutdown
 
 Further, a richer set of operations for sending and receiving messages, in
