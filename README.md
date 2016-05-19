@@ -17,7 +17,7 @@ I wrote the following reports:
   * Report 4: [Kernel Lua I/O API 
   Specification](https://github.com/salazar/luaio/blob/master/docs/r4_api.txt)
   * Report 5: [Project 
-  Schedule](https://github.com/salazar/luaio/blob/master/docs/r5_5chedule.txt)
+  Schedule](https://github.com/salazar/luaio/blob/master/docs/r5_schedule.txt)
 
 'src' contains source code
 
