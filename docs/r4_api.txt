@@ -1,0 +1,115 @@
+Kernel Lua I/O API specification
+================================
+
+On a high level, kernel Lua will access I/O functionality through two
+loadable kernel modules, which are kernel Lua modules (see lua(4) section
+modules):
+  - files, implementing a regular files API
+  - sockets, implementing a sockets API
+
+Supporting libraries are one level below:
+  - io: base I/O functions, such as 'read' and 'write'; this is common to all
+    kernel I/O objects, represented by a file descriptor in higher levels of
+    abstraction
+  - sockets: sockets library built on top of the kernel API for sockets
+
+* Proposed Lua API
+  ------------
+
+  - general:
+
+    * write(fd, buff)
+      - receive
+        * fd: the file descriptor to which write
+        * buff: content to be written, encoded in a Lua string
+      - return
+        * 0 on success, -1 otherwise
+
+    * read(fd, count)
+      - receive
+        * fd: the file descriptor to which write
+        * count: how many bytes to read
+      - return
+        * a Lua string with the content read, nil on error
+
+  - files:
+
+    * open(path, flags [, perms]): opens a file for read/write
+      - receive
+        * path: the file path
+        * flags: flags; open, write (or both) and other flags that will be
+          documented later (e.g., O_APPEND, O_CREAT)
+        * perms: the permissions associated with the file; required if
+          O_CREAT was specified; format will be specified later
+      - return
+        * a file descriptor, which is a small integer representing an open
+          file or -1 on error
+    * close(fd): closes a file
+      - receive
+        * fd: the file descriptor associated with an open file
+      - return
+        * true on success, false otherwise
+
+   - sockets:
+
+     Basic socket API
+
+     * socket(domain, type): creates a socket
+       - receive
+         * domain: the domain of communication; a priori, only the following
+           will be supported:
+           - local domain communication
+           - IPv4 Internet protocols
+           - IPv6 Internet protocols
+         * type: a priori, only stream and datagram
+         * a protocol argument will not be added for now; UDP and TCP will be
+           assumed for datagram and stream, respectively
+       - return
+         * the socket file descriptor on success, nil otherwise
+
+     * bind(fd [, address]): binds a name to a socket
+       - receive
+         * fd: socket file descriptor
+         * address: if specified, should be a string in the format
+           "address:port", otherwise, INADDR_ANY will be assumed and getsockname
+           should be used if needed
+       - return
+         * true on success, false otherwise
+    * connect(fd [, address]): initiate a connection on a socket
+       - receive
+         * fd: file descriptor of a datagram socket
+         * address: if specified, should be a string in the format
+           "address:port", otherwise, INADDR_ANY will be assumed and getsockname
+           should be used if needed
+       - return
+         * true on success, false otherwise
+
+     * listen(fd, backlog): listen for connections
+       - receive
+         * fd: socket file descriptor
+         * backlog: maximum size of the queue of incoming connections
+       - return
+         * true on success, false otherwise
+ 
+     * accept(fd): extracts the first incoming connection from the
+       queue of incoming connections and creating a connection socket
+       - receive
+         * fd: file descriptor of a stream socket
+       - return
+         * the connection socket file descriptor on success, nil otherwise
+
+     * shutdown(fd, how): shutdown a connection
+       - receive
+         * fd: file descriptor of a socket
+         * how: if SHUT_RECV, further receptions will be disallowed; if
+           SHUT_ALL, further receptions and transmissions will be disallowed
+       - return
+         * true on success, false otherwise
+
+     Secondary functionality
+
+* References
+  ----------
+
+  - NetBSD man pages were heavily used; checkout https://man-k.org for a
+    man page search engine ; )
