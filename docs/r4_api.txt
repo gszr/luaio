@@ -23,7 +23,7 @@ Supporting libraries are one level below:
         * fd: the file descriptor to which write
         * buff: content to be written, encoded in a Lua string
       - return
-        * 0 on success, -1 otherwise
+        * true on success, false otherwise
 
     * read(fd, count)
       - receive
@@ -43,7 +43,7 @@ Supporting libraries are one level below:
           O_CREAT was specified; format will be specified later
       - return
         * a file descriptor, which is a small integer representing an open
-          file or -1 on error
+          file, nil on error
     * close(fd): closes a file
       - receive
         * fd: the file descriptor associated with an open file
