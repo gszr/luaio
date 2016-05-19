@@ -16,6 +16,8 @@ I wrote the following reports:
   * Report 3: NetBSD Networking Subsystem overview (soon)
   * Report 4: [Kernel Lua I/O API 
   Specification](https://github.com/salazar/luaio/blob/master/docs/r4_api.txt)
+  * Report 5: [Project 
+  Schedule](https://github.com/salazar/luaio/blob/master/docs/r5_5chedule.txt)
 
 'src' contains source code
 
