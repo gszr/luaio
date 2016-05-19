@@ -13,7 +13,8 @@ I wrote the following reports:
   * Report 2: [NetBSD I/O Subsystem 
   overview](https://github.com/salazar/luaio/blob/master/docs/r2_io.txt)
   * Report 3: NetBSD Networking Subsystem overview (soon)
-  * Report 4: Kernel Lua I/O API Specification (soon)
+  * Report 4: [Kernel Lua I/O API 
+  Specification](https://github.com/salazar/luaio/blob/master/docs/r4_api.txt)
 
 'src' contains source code
 
