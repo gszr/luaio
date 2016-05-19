@@ -1,6 +1,7 @@
-# luaio - kernel Lua I/O API
+# Welcome to my Google Summer of Code LabLua '16 project!
 
-## Welcome to my Google Summer of Code LabLua '16 project!
+## luaio - kernel Lua I/O API
+
 
 I'm building NetBSD kernel I/O (files and sockets) bindings for kernel Lua 
 under [lneto](https://github.com/lneto)'s mentorship.
