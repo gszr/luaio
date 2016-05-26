@@ -1,7 +1,7 @@
 #include <sys/filedesc.h>
-#include <sys/fcntl.h>
 #include <sys/file.h>
-#include <sys/stat.h>
+#include <sys/syscallargs.h>
+#include <sys/vfs_syscalls.h>
 
 #include "io.h"
 #include "lua_sys_generic.h"
@@ -60,4 +60,25 @@ kwrite(int fd, const void *buf, size_t count)
 	    &ret))
 		return -1;
 	return ret;
+}
+
+int
+kseek(int fd, off_t offset, int whence)
+{
+	struct sys_lseek_args sargs;
+	register_t ret;
+
+	memset(&sargs, 0, sizeof sargs);
+	SCARG(&sargs, fd) = fd;
+	SCARG(&sargs, PAD) = 0;
+	SCARG(&sargs, offset) = offset;
+	SCARG(&sargs, whence) = whence;
+
+	return sys_lseek(curlwp, &sargs, &ret);
+}
+
+int
+kunlink(const char *path)
+{
+	return do_sys_unlink(path, UIO_SYSSPACE);
 }
