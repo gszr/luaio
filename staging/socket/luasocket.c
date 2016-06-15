@@ -120,12 +120,14 @@ socket_bind_connect(BindOrConnect handler, lua_State *L)
 	return 1;
 }
 
+inline
 static int
 socket_connect(lua_State *L)
 {
 	return socket_bind_connect(soconnect, L);
 }
 
+inline
 static int
 socket_bind(lua_State *L)
 {
