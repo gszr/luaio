@@ -1,7 +1,7 @@
 CVS=/usr/src
 
-KMOD= luasockets
-SRCS= luasockets.c
+KMOD= luasocket
+SRCS= luasocket.c
 
 CPPFLAGS+=	-I${CVS}/external/mit/lua/dist/src \
 			-I${CVS}/sys/sys \

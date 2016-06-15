@@ -1,4 +1,4 @@
-/* Lua sockets module */
+/* Lua socket module */
 
 #include <sys/lua.h>
 #include <sys/module.h>
@@ -10,7 +10,7 @@
 
 #include <stdio.h>
 
-MODULE(MODULE_CLASS_MISC, luasockets, "lua");
+MODULE(MODULE_CLASS_MISC, luasocket, "lua");
 
 #define BUF_SIZE 1024
 
@@ -20,7 +20,7 @@ struct luasocket {
 };
 
 static int
-sockets_socket(lua_State *L)
+socket_new(lua_State *L)
 {
 	struct luasocket *luasocket;
 	struct socket *so;
@@ -63,7 +63,7 @@ sockets_socket(lua_State *L)
 }
 
 static int
-sockets_close(lua_State *L)
+socket_close(lua_State *L)
 {
 	struct luasocket *luasocket;
 	int err;
@@ -79,7 +79,7 @@ sockets_close(lua_State *L)
 typedef int BindOrConnect(struct socket*, struct sockaddr*, struct lwp*);
 
 static int
-sockets_bind_connect(BindOrConnect handler, lua_State *L)
+socket_bind_connect(BindOrConnect handler, lua_State *L)
 {
 	struct luasocket *luasocket;
 	const char *domn;
@@ -121,19 +121,19 @@ sockets_bind_connect(BindOrConnect handler, lua_State *L)
 }
 
 static int
-sockets_connect(lua_State *L)
+socket_connect(lua_State *L)
 {
-	return sockets_bind_connect(soconnect, L);
+	return socket_bind_connect(soconnect, L);
 }
 
 static int
-sockets_bind(lua_State *L)
+socket_bind(lua_State *L)
 {
-	return sockets_bind_connect(sobind, L);
+	return socket_bind_connect(sobind, L);
 }
 
 static int
-sockets_write(lua_State *L)
+socket_write(lua_State *L)
 {
 	struct luasocket* luasocket;
 	const char *buff;
@@ -151,7 +151,7 @@ sockets_write(lua_State *L)
 }
 
 static int
-sockets_read(lua_State *L)
+socket_read(lua_State *L)
 {
 	struct luasocket* luasocket;
 	//XXX probably not a good idea; lua_pushlstring?
@@ -170,33 +170,33 @@ sockets_read(lua_State *L)
 }
 
 static int
-luaopen_sockets(lua_State *L)
+luaopen_socket(lua_State *L)
 {
-	const luaL_Reg sockets_lib[] = {
-		{"socket", sockets_socket},
-		{"bind", sockets_bind},
-		{"connect", sockets_connect},
-		{"close", sockets_close},
-		{"write", sockets_write},
-		{"read", sockets_read},
+	const luaL_Reg socket_lib[] = {
+		{"new", socket_new},
+		{"bind", socket_bind},
+		{"connect", socket_connect},
+		{"close", socket_close},
+		{"write", socket_write},
+		{"read", socket_read},
 		{ NULL, NULL }
 	};
 
-	luaL_newlib(L, sockets_lib);
+	luaL_newlib(L, socket_lib);
 
 	return 1;
 }
 
 static int
-luasockets_modcmd(modcmd_t cmd, void *opaque)
+luasocket_modcmd(modcmd_t cmd, void *opaque)
 {
 	int error;
 	switch (cmd) {
 	case MODULE_CMD_INIT:
-		error = klua_mod_register("sockets", luaopen_sockets);
+		error = klua_mod_register("socket", luaopen_socket);
 		break;
 	case MODULE_CMD_FINI:
-		error = klua_mod_unregister("sockets");
+		error = klua_mod_unregister("socket");
 		break;
 	default:
 		error = ENOTTY;
