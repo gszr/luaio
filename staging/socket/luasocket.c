@@ -42,14 +42,14 @@ socket_new(lua_State *L)
 	else if (strcmp(domain, "local"))
 		dom = AF_LOCAL;
 	else
-		luaL_error(L, "'%s' domain not supported\n", domain);
+		luaL_error(L, "'%s' domain not supported", domain);
 
 	if (strcmp(type, "dgram") == 0 || strcmp(type, "datagram") == 0)
 		typ = SOCK_DGRAM;
 	else if (strcmp(type, "stream"))
 		typ = SOCK_STREAM;
 	else
-		luaL_error(L, "'%s' type not supported\n", type);
+		luaL_error(L, "'%s' type not supported", type);
 
 	if ((err = fsocreate(dom, &so, typ, 0, &sfd)))
 		luaL_error(L, "could not create socket (error %d)", err);
@@ -69,9 +69,9 @@ socket_close(lua_State *L)
 	int err;
 
 	if ((luasocket = (struct luasocket *) lua_touserdata(L, 1)) == NULL)
-		luaL_error(L, "invalid Lua socket\n");
+		luaL_error(L, "invalid Lua socket");
 	if ((err = soclose(luasocket->so)) != 0)
-		luaL_error(L, "could not close socket (error %d)\n", err);
+		luaL_error(L, "could not close socket (error %d)", err);
 	lua_pushboolean(L, 1);
 	return 1;
 }
