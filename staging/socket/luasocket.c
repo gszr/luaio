@@ -15,7 +15,7 @@ MODULE(MODULE_CLASS_MISC, luasocket, "lua");
 #define BUF_SIZE 1024
 
 struct luasocket {
-	struct socket *socket;
+	struct socket *so;
 	int fd;
 };
 
@@ -56,7 +56,7 @@ socket_new(lua_State *L)
 
 	luasocket = (struct luasocket*)
 		lua_newuserdata(L, sizeof(struct luasocket));
-	luasocket->socket = so;
+	luasocket->so = so;
 	luasocket->fd = sfd;
 
 	return 1;
@@ -70,7 +70,7 @@ socket_close(lua_State *L)
 
 	if ((luasocket = (struct luasocket *) lua_touserdata(L, 1)) == NULL)
 		luaL_error(L, "invalid Lua socket\n");
-	if ((err = soclose(luasocket->socket)) != 0)
+	if ((err = soclose(luasocket->so)) != 0)
 		luaL_error(L, "could not close socket (error %d)\n", err);
 	lua_pushboolean(L, 1);
 	return 1;
@@ -106,11 +106,11 @@ socket_bind_connect(BindOrConnect handler, lua_State *L)
 		in4addr.sin_port = htons(luaL_checkinteger(L, -1));
 		in4addr.sin_family = AF_INET;
 
-		solock(luasocket->socket);
-		if ((err = handler(luasocket->socket, (struct sockaddr*) &in4addr,
+		solock(luasocket->so);
+		if ((err = handler(luasocket->so, (struct sockaddr*) &in4addr,
 			curlwp)) != 0)
 			luaL_error(L, "could not connect");
-		sounlock(luasocket->socket);
+		sounlock(luasocket->so);
 
 		lua_pushboolean(L, 1);
 	} else if (strcmp(domn, "local") == 0) {
