@@ -14,9 +14,13 @@ MODULE(MODULE_CLASS_MISC, luasocket, "lua");
 
 #define BUF_SIZE 1024
 
+#define LUA_SOCK "luasock"
+
 struct luasocket {
 	struct socket *so;
 	int fd;
+	int dom;
+	int typ;
 };
 
 static int
@@ -34,7 +38,6 @@ socket_new(lua_State *L)
 	domain = luaL_checkstring(L, 1);
 	type   = luaL_checkstring(L, 2);
 
-	//XXX not about using strings to name domains (types, etc)
 	if (strcmp(domain, "inet4") == 0)
 		dom = AF_INET;
 	else if (strcmp(domain, "inet6"))
@@ -56,8 +59,12 @@ socket_new(lua_State *L)
 
 	luasocket = (struct luasocket*)
 		lua_newuserdata(L, sizeof(struct luasocket));
-	luasocket->so = so;
-	luasocket->fd = sfd;
+	luaL_setmetatable(L, LUA_SOCK);
+
+	luasocket->so  = so;
+	luasocket->fd  = sfd;
+	luasocket->dom = dom;
+	luasocket->typ = typ;
 
 	return 1;
 }
@@ -70,34 +77,31 @@ socket_close(lua_State *L)
 
 	if ((luasocket = (struct luasocket *) lua_touserdata(L, 1)) == NULL)
 		luaL_error(L, "invalid Lua socket");
-	if ((err = soclose(luasocket->so)) != 0)
+	if ((err = close(luasocket->fd)) != 0)
 		luaL_error(L, "could not close socket (error %d)", err);
 	lua_pushboolean(L, 1);
+
 	return 1;
 }
 
 typedef int BindOrConnect(struct socket*, struct sockaddr*, struct lwp*);
 
 static int
-socket_bind_connect(BindOrConnect handler, lua_State *L)
+socket_bind_or_conn(BindOrConnect handler, lua_State *L)
 {
 	struct luasocket *luasocket;
-	const char *domn;
 	const char *addr;
 	int err;
 
 	if ((luasocket = (struct luasocket *) lua_touserdata(L, 1)) == NULL)
 		luaL_error(L, "invalid socket");
-	domn = luaL_checkstring(L, 2);
-	addr = luaL_checkstring(L, 3);
+	addr = luaL_checkstring(L, 2);
 
 	// XXX inet4 and inet6 could share code
-	// XXX we could also declare a sockaddr in the function scope
-	// and then specialize it to sockaddr_in(,6, un) in the branches below
-	if (strcmp(domn, "inet4") == 0) {
+	if (luasocket->dom == AF_INET) {
 		struct sockaddr_in in4addr;
 
-		if (lua_gettop(L) != 4)
+		if (lua_gettop(L) != 3)
 			luaL_error(L, "inet4 expects an IP address and a port number");
 
 		memset(&in4addr, 0, sizeof(in4addr));
@@ -113,25 +117,21 @@ socket_bind_connect(BindOrConnect handler, lua_State *L)
 		sounlock(luasocket->so);
 
 		lua_pushboolean(L, 1);
-	} else if (strcmp(domn, "local") == 0) {
-		;
 	}
 
 	return 1;
 }
 
-inline
-static int
+inline static int
 socket_connect(lua_State *L)
 {
-	return socket_bind_connect(soconnect, L);
+	return socket_bind_or_conn(soconnect, L);
 }
 
-inline
-static int
+inline static int
 socket_bind(lua_State *L)
 {
-	return socket_bind_connect(sobind, L);
+	return socket_bind_or_conn(sobind, L);
 }
 
 static int
@@ -176,15 +176,25 @@ luaopen_socket(lua_State *L)
 {
 	const luaL_Reg socket_lib[] = {
 		{"new", socket_new},
+		{"close", socket_close},
+		{NULL, NULL}
+	};
+
+	const luaL_Reg socket_meta[] = {
 		{"bind", socket_bind},
 		{"connect", socket_connect},
 		{"close", socket_close},
 		{"write", socket_write},
 		{"read", socket_read},
-		{ NULL, NULL }
+		{NULL, NULL}
 	};
 
 	luaL_newlib(L, socket_lib);
+	luaL_newmetatable(L, LUA_SOCK);
+	lua_pushvalue(L, -1);
+	lua_setfield(L, -2, "__index");
+	luaL_setfuncs(L, socket_meta, 0);
+	lua_pop(L, 1);
 
 	return 1;
 }
