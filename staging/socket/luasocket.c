@@ -109,9 +109,12 @@ bindOrConn_inet(BindOrConnect bindOrConn, struct socket* so, const char *addr,
 	in4addr.sin_port = htons(port);
 	in4addr.sin_family = AF_INET;
 
-	solock(so);
+	/* XXX dealing with inconsistent locking protocol */
+	if (bindOrConn == soconnect)
+		solock(so);
 	err = bindOrConn(so, (struct sockaddr*) &in4addr, curlwp);
-	sounlock(so);
+	if (bindOrConn == soconnect)
+		sounlock(so);
 
 	return err;
 }
