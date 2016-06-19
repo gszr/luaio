@@ -171,13 +171,17 @@ socket_write(lua_State *L)
 {
 	struct luasocket* luasocket;
 	const char *buff;
-	int cnt;
+	int cnt, len;
 
 	luasocket = checksock(L, 1);
 	buff = luaL_checkstring(L, 2);
 
-	//XXX handle binary data
-	cnt = write(luasocket->fd, buff, strlen(buff));
+	if(lua_gettop(L) == 3)
+		len = luaL_checkinteger(L, 3);
+	else
+		len = strlen(buff);
+
+	cnt = write(luasocket->fd, buff, len);
 	lua_pushinteger(L, cnt);
 
 	return 1;
