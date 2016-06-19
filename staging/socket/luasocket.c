@@ -23,6 +23,17 @@ struct luasocket {
 	int typ;
 };
 
+inline static struct luasocket*
+checksock(lua_State *L, int idx)
+{
+	struct luasocket *l;
+
+	if ((l = (struct luasocket*) lua_touserdata(L, idx)) == NULL)
+		luaL_error(L, "invalid Lua socket");
+
+	return l;
+}
+
 static int
 socket_new(lua_State *L)
 {
@@ -75,8 +86,7 @@ socket_close(lua_State *L)
 	struct luasocket *luasocket;
 	int err;
 
-	if ((luasocket = (struct luasocket *) lua_touserdata(L, 1)) == NULL)
-		luaL_error(L, "invalid Lua socket");
+	luasocket = checksock(L, 1);
 	if ((err = close(luasocket->fd)) != 0)
 		luaL_error(L, "could not close socket (error %d)", err);
 	lua_pushboolean(L, 1);
@@ -87,51 +97,70 @@ socket_close(lua_State *L)
 typedef int BindOrConnect(struct socket*, struct sockaddr*, struct lwp*);
 
 static int
-socket_bind_or_conn(BindOrConnect handler, lua_State *L)
+bindOrConn_inet(BindOrConnect bindOrConn, struct socket* so, const char *addr,
+                  int port)
+{
+	struct sockaddr_in in4addr;
+	int err;
+
+	memset(&in4addr, 0, sizeof(in4addr));
+	in4addr.sin_len = sizeof(struct sockaddr_in);
+	in4addr.sin_addr.s_addr = inet_addr(addr);
+	in4addr.sin_port = htons(port);
+	in4addr.sin_family = AF_INET;
+
+	solock(so);
+	err = bindOrConn(so, (struct sockaddr*) &in4addr, curlwp);
+	sounlock(so);
+
+	return err;
+}
+
+static int
+socket_bindOrConn(BindOrConnect bindOrConn, lua_State *L)
 {
 	struct luasocket *luasocket;
 	const char *addr;
 	int err;
 
-	if ((luasocket = (struct luasocket *) lua_touserdata(L, 1)) == NULL)
-		luaL_error(L, "invalid socket");
+	luasocket = checksock(L, 1);
 	addr = luaL_checkstring(L, 2);
 
-	// XXX inet4 and inet6 could share code
-	if (luasocket->dom == AF_INET) {
-		struct sockaddr_in in4addr;
-
-		if (lua_gettop(L) != 3)
-			luaL_error(L, "inet4 expects an IP address and a port number");
-
-		memset(&in4addr, 0, sizeof(in4addr));
-		in4addr.sin_len = sizeof(struct sockaddr_in);
-		in4addr.sin_addr.s_addr = inet_addr(addr);
-		in4addr.sin_port = htons(luaL_checkinteger(L, -1));
-		in4addr.sin_family = AF_INET;
-
-		solock(luasocket->so);
-		if ((err = handler(luasocket->so, (struct sockaddr*) &in4addr,
-			curlwp)) != 0)
-			luaL_error(L, "could not connect");
-		sounlock(luasocket->so);
-
-		lua_pushboolean(L, 1);
+	switch(luasocket->dom) {
+		case AF_INET: {
+			int port = luaL_checkinteger(L, -1);
+			err = bindOrConn_inet(bindOrConn, luasocket->so, addr, port);
+			break;
+		}
 	}
 
+	lua_pushboolean(L, err);
 	return 1;
 }
 
 inline static int
 socket_connect(lua_State *L)
 {
-	return socket_bind_or_conn(soconnect, L);
+	return socket_bindOrConn(soconnect, L);
 }
 
 inline static int
 socket_bind(lua_State *L)
 {
-	return socket_bind_or_conn(sobind, L);
+	return socket_bindOrConn(sobind, L);
+}
+
+static int
+socket_listen(lua_State *L)
+{
+	struct luasocket *l;
+	int err, bl;
+
+	l = checksock(L, 1);
+	bl = luaL_checkinteger(L, 2);
+	lua_pushboolean(L, solisten(l->so, bl, curlwp) == 0);
+
+	return 1;
 }
 
 static int
@@ -141,8 +170,7 @@ socket_write(lua_State *L)
 	const char *buff;
 	int cnt;
 
-	if ((luasocket = (struct luasocket*) lua_touserdata(L, 1)) == NULL)
-		luaL_error(L, "invalid socket");
+	luasocket = checksock(L, 1);
 	buff = luaL_checkstring(L, 2);
 
 	//XXX handle binary data
@@ -160,9 +188,7 @@ socket_read(lua_State *L)
 	char buff[BUF_SIZE];
 	int cnt;
 
-	if ((luasocket = (struct luasocket*) lua_touserdata(L, 1)) == NULL)
-		luaL_error(L, "invalid socket");
-
+	luasocket = checksock(L, 1);
 	cnt = read(luasocket->fd, &buff, BUF_SIZE);
 
 	lua_pushinteger(L, cnt);
@@ -183,6 +209,7 @@ luaopen_socket(lua_State *L)
 	const luaL_Reg socket_meta[] = {
 		{"bind", socket_bind},
 		{"connect", socket_connect},
+		{"listen", socket_listen},
 		{"close", socket_close},
 		{"write", socket_write},
 		{"read", socket_read},
