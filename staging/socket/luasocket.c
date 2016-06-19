@@ -191,15 +191,14 @@ static int
 socket_read(lua_State *L)
 {
 	struct luasocket* luasocket;
-	//XXX probably not a good idea; lua_pushlstring?
-	char buff[BUF_SIZE];
+	luaL_Buffer buff;
 	int cnt;
 
 	luasocket = checksock(L, 1);
-	cnt = read(luasocket->fd, &buff, BUF_SIZE);
+	cnt = read(luasocket->fd, luaL_buffinitsize(L, &buff, BUF_SIZE), BUF_SIZE);
 
 	lua_pushinteger(L, cnt);
-	lua_pushlstring(L, buff, cnt);
+	luaL_pushresultsize(&buff, cnt);
 
 	return 1;
 }
