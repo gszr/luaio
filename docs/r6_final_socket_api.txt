@@ -1,0 +1,27 @@
+Lua socket module API
+=====================
+
+The final API for the socket module is as follows:
+
+* Socket creation
+
+  socket.udp(): creates a UDP socket
+  socket.tcp(): creates a TCP socket
+  socket.raw(): creates a RAW (IP) socket
+  socket.local(): creates a local socket
+
+* Socket manipulation
+
+  socket:close
+  socket.close(socket): closes the given socket
+
+  socket:bind(address, port): binds the socket to an address
+  socket:listen(backlog): puts the socket in listening mode
+  socket:connect(address, port): set up a connection to the given address
+  socket:accept(): accepts a connection; a new socket is returned
+  socket:shutdown(how): shuts down a connection according to 'how'; if it
+    is 'recv', disallows further receives; if it's 'send', disallows further
+    transmissions; if it is 'both', disallows further transmissions and
+    receptions
+  socket:write(string): returns how many chars were written
+  socket:read(): returns the string read and its length

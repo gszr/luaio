@@ -1,0 +1,1212 @@
+diff --git a/external/mit/lua/dist/src/lauxlib.c b/external/mit/lua/dist/src/lauxlib.c
+index 3b755ca..42add5c 100644
+--- a/external/mit/lua/dist/src/lauxlib.c
++++ b/external/mit/lua/dist/src/lauxlib.c
+@@ -12,12 +12,10 @@
+ #include "lprefix.h"
+ 
+ 
+-#ifndef _KERNEL
+ #include <errno.h>
+-#endif /* _KERNEL */
+ #include <stdarg.h>
+-#ifndef _KERNEL
+ #include <stdio.h>
++#ifndef _KERNEL
+ #include <stdlib.h>
+ #include <string.h>
+ #endif /* _KERNEL */
+@@ -228,7 +226,6 @@ LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...) {
+ }
+ 
+ 
+-#ifndef _KERNEL
+ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
+   int en = errno;  /* calls to Lua API may change this value */
+   if (stat) {
+@@ -245,7 +242,6 @@ LUALIB_API int luaL_fileresult (lua_State *L, int stat, const char *fname) {
+     return 3;
+   }
+ }
+-#endif /* _KERNEL */
+ 
+ 
+ #if !defined(l_inspectstat)	/* { */
+@@ -630,7 +626,6 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
+ ** =======================================================
+ */
+ 
+-#ifndef _KERNEL
+ typedef struct LoadF {
+   int n;  /* number of pre-read characters */
+   FILE *f;  /* file being read */
+@@ -716,11 +711,13 @@ LUALIB_API int luaL_loadfilex (lua_State *L, const char *filename,
+   }
+   if (skipcomment(&lf, &c))  /* read initial portion */
+     lf.buff[lf.n++] = '\n';  /* add line to correct line numbers */
++#ifndef _KERNEL
+   if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
+     lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
+     if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
+     skipcomment(&lf, &c);  /* re-read initial portion */
+   }
++#endif /* _KERNEL */
+   if (c != EOF)
+     lf.buff[lf.n++] = c;  /* 'c' is the first character of the stream */
+   status = lua_load(L, getF, &lf, lua_tostring(L, -1), mode);
+@@ -733,7 +730,6 @@ LUALIB_API int luaL_loadfilex (lua_State *L, const char *filename,
+   lua_remove(L, fnameindex);
+   return status;
+ }
+-#endif /* _KERNEL */
+ 
+ 
+ typedef struct LoadS {
+diff --git a/external/mit/lua/dist/src/lauxlib.h b/external/mit/lua/dist/src/lauxlib.h
+index 76db9ca..3cd1276 100644
+--- a/external/mit/lua/dist/src/lauxlib.h
++++ b/external/mit/lua/dist/src/lauxlib.h
+@@ -13,8 +13,8 @@
+ 
+ #ifndef _KERNEL
+ #include <stddef.h>
+-#include <stdio.h>
+ #endif /* _KERNEL */
++#include <stdio.h>
+ 
+ #include "lua.h"
+ 
+@@ -71,8 +71,8 @@ LUALIB_API int (luaL_error) (lua_State *L, const char *fmt, ...);
+ LUALIB_API int (luaL_checkoption) (lua_State *L, int arg, const char *def,
+                                    const char *const lst[]);
+ 
+-#ifndef _KERNEL
+ LUALIB_API int (luaL_fileresult) (lua_State *L, int stat, const char *fname);
++#ifndef _KERNEL
+ LUALIB_API int (luaL_execresult) (lua_State *L, int stat);
+ #endif /* _KERNEL */
+ 
+@@ -83,12 +83,10 @@ LUALIB_API int (luaL_execresult) (lua_State *L, int stat);
+ LUALIB_API int (luaL_ref) (lua_State *L, int t);
+ LUALIB_API void (luaL_unref) (lua_State *L, int t, int ref);
+ 
+-#ifndef _KERNEL
+ LUALIB_API int (luaL_loadfilex) (lua_State *L, const char *filename,
+                                                const char *mode);
+ 
+ #define luaL_loadfile(L,f)	luaL_loadfilex(L,f,NULL)
+-#endif /* _KERNEL */
+ 
+ LUALIB_API int (luaL_loadbufferx) (lua_State *L, const char *buff, size_t sz,
+                                    const char *name, const char *mode);
+@@ -182,7 +180,6 @@ LUALIB_API char *(luaL_buffinitsize) (lua_State *L, luaL_Buffer *B, size_t sz);
+ 
+ 
+ 
+-#ifndef _KERNEL
+ /*
+ ** {======================================================
+ ** File handles for IO library
+@@ -204,7 +201,6 @@ typedef struct luaL_Stream {
+ } luaL_Stream;
+ 
+ /* }====================================================== */
+-#endif /* _KERNEL */
+ 
+ 
+ 
+diff --git a/external/mit/lua/dist/src/lbaselib.c b/external/mit/lua/dist/src/lbaselib.c
+index f7b95b4..f9ed6a2 100644
+--- a/external/mit/lua/dist/src/lbaselib.c
++++ b/external/mit/lua/dist/src/lbaselib.c
+@@ -289,7 +289,6 @@ static int load_aux (lua_State *L, int status, int envidx) {
+ }
+ 
+ 
+-#ifndef _KERNEL
+ static int luaB_loadfile (lua_State *L) {
+   const char *fname = luaL_optstring(L, 1, NULL);
+   const char *mode = luaL_optstring(L, 2, NULL);
+@@ -297,7 +296,6 @@ static int luaB_loadfile (lua_State *L) {
+   int status = luaL_loadfilex(L, fname, mode);
+   return load_aux(L, status, env);
+ }
+-#endif /* _KERNEL */
+ 
+ 
+ /*
+@@ -360,7 +358,6 @@ static int luaB_load (lua_State *L) {
+ /* }====================================================== */
+ 
+ 
+-#ifndef _KERNEL
+ static int dofilecont (lua_State *L, int d1, lua_KContext d2) {
+   (void)d1;  (void)d2;  /* only to match 'lua_Kfunction' prototype */
+   return lua_gettop(L) - 1;
+@@ -375,7 +372,6 @@ static int luaB_dofile (lua_State *L) {
+   lua_callk(L, 0, LUA_MULTRET, 0, dofilecont);
+   return dofilecont(L, 0, 0);
+ }
+-#endif /* _KERNEL */
+ 
+ 
+ static int luaB_assert (lua_State *L) {
+@@ -462,15 +458,11 @@ static int luaB_tostring (lua_State *L) {
+ static const luaL_Reg base_funcs[] = {
+   {"assert", luaB_assert},
+   {"collectgarbage", luaB_collectgarbage},
+-#ifndef _KERNEL
+   {"dofile", luaB_dofile},
+-#endif /* _KERNEL */
+   {"error", luaB_error},
+   {"getmetatable", luaB_getmetatable},
+   {"ipairs", luaB_ipairs},
+-#ifndef _KERNEL
+   {"loadfile", luaB_loadfile},
+-#endif /* _KERNEL */
+   {"load", luaB_load},
+ #if defined(LUA_COMPAT_LOADSTRING)
+   {"loadstring", luaB_load},
+@@ -492,6 +484,9 @@ static const luaL_Reg base_funcs[] = {
+   /* placeholders */
+   {"_G", NULL},
+   {"_VERSION", NULL},
++#ifdef _KERNEL
++  {"_KERNEL", NULL},
++#endif /* _KERNEL */
+   {NULL, NULL}
+ };
+ 
+@@ -506,6 +501,10 @@ LUAMOD_API int luaopen_base (lua_State *L) {
+   /* set global _VERSION */
+   lua_pushliteral(L, LUA_VERSION);
+   lua_setfield(L, -2, "_VERSION");
++#ifdef _KERNEL
++  lua_pushboolean(L, true);
++  lua_setfield(L, -2, "_KERNEL");
++#endif /* _KERNEL */
+   return 1;
+ }
+ 
+diff --git a/external/mit/lua/dist/src/linit.c b/external/mit/lua/dist/src/linit.c
+index 55fbd10..ede64bb 100644
+--- a/external/mit/lua/dist/src/linit.c
++++ b/external/mit/lua/dist/src/linit.c
+@@ -50,14 +50,10 @@ static const luaL_Reg loadedlibs[] = {
+ #endif /* _KERNEL */
+   {LUA_COLIBNAME, luaopen_coroutine},
+   {LUA_TABLIBNAME, luaopen_table},
+-#ifndef _KERNEL
+   {LUA_IOLIBNAME, luaopen_io},
+   {LUA_OSLIBNAME, luaopen_os},
+-#endif /* _KERNEL */
+   {LUA_STRLIBNAME, luaopen_string},
+-#ifndef _KERNEL
+   {LUA_MATHLIBNAME, luaopen_math},
+-#endif /* _KERNEL */
+   {LUA_UTF8LIBNAME, luaopen_utf8},
+   {LUA_DBLIBNAME, luaopen_debug},
+ #if defined(LUA_COMPAT_BITLIB)
+diff --git a/external/mit/lua/dist/src/liolib.c b/external/mit/lua/dist/src/liolib.c
+index 5753ac8..d7df59f 100644
+--- a/external/mit/lua/dist/src/liolib.c
++++ b/external/mit/lua/dist/src/liolib.c
+@@ -12,12 +12,16 @@
+ #include "lprefix.h"
+ 
+ 
++#ifndef _KERNEL
+ #include <ctype.h>
++#endif /* _KERNEL */
+ #include <errno.h>
++#ifndef _KERNEL
+ #include <locale.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
++#endif /* _KERNEL */
+ 
+ #include "lua.h"
+ 
+@@ -46,6 +50,7 @@
+ 
+ #endif
+ 
++#ifndef _KERNEL
+ /*
+ ** {======================================================
+ ** l_popen spawns a new process connected to the current
+@@ -79,6 +84,7 @@
+ #endif				/* } */
+ 
+ /* }====================================================== */
++#endif /* _KERNEL */
+ 
+ 
+ #if !defined(l_getc)		/* { */
+@@ -260,6 +266,7 @@ static int io_open (lua_State *L) {
+ }
+ 
+ 
++#ifndef _KERNEL
+ /*
+ ** function to close 'popen' files
+ */
+@@ -277,6 +284,7 @@ static int io_popen (lua_State *L) {
+   p->closef = &io_pclose;
+   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
+ }
++#endif /* _KERNEL */
+ 
+ 
+ static int io_tmpfile (lua_State *L) {
+@@ -434,10 +442,14 @@ static int read_number (lua_State *L, FILE *f) {
+   RN rn;
+   int count = 0;
+   int hex = 0;
++#ifndef _KERNEL
+   char decp[2];
++#endif /* _KERNEL */
+   rn.f = f; rn.n = 0;
++#ifndef _KERNEL
+   decp[0] = lua_getlocaledecpoint();  /* get decimal point from locale */
+   decp[1] = '\0';
++#endif /* _KERNEL */
+   l_lockfile(rn.f);
+   do { rn.c = l_getc(rn.f); } while (isspace(rn.c));  /* skip spaces */
+   test2(&rn, "-+");  /* optional signal */
+@@ -446,6 +458,7 @@ static int read_number (lua_State *L, FILE *f) {
+     else count = 1;  /* count initial '0' as a valid digit */
+   }
+   count += readdigits(&rn, hex);  /* integral part */
++#ifndef _KERNEL
+   if (test2(&rn, decp))  /* decimal point? */
+     count += readdigits(&rn, hex);  /* fractional part */
+   if (count > 0 && test2(&rn, (hex ? "pP" : "eE"))) {  /* exponent mark? */
+@@ -453,6 +466,7 @@ static int read_number (lua_State *L, FILE *f) {
+     readdigits(&rn, 0);  /* exponent digits */
+   }
+   ungetc(rn.c, rn.f);  /* unread look-ahead char */
++#endif
+   l_unlockfile(rn.f);
+   rn.buff[rn.n] = '\0';  /* finish string */
+   if (lua_stringtonumber(L, rn.buff))  /* is this a valid number? */
+@@ -663,6 +677,7 @@ static int f_seek (lua_State *L) {
+ }
+ 
+ 
++#ifndef _KERNEL
+ static int f_setvbuf (lua_State *L) {
+   static const int mode[] = {_IONBF, _IOFBF, _IOLBF};
+   static const char *const modenames[] = {"no", "full", "line", NULL};
+@@ -683,6 +698,7 @@ static int io_flush (lua_State *L) {
+ static int f_flush (lua_State *L) {
+   return luaL_fileresult(L, fflush(tofile(L)) == 0, NULL);
+ }
++#endif /* _KERNEL */
+ 
+ 
+ /*
+@@ -690,12 +706,16 @@ static int f_flush (lua_State *L) {
+ */
+ static const luaL_Reg iolib[] = {
+   {"close", io_close},
++#ifndef _KERNEL
+   {"flush", io_flush},
++#endif /* _KERNEL */
+   {"input", io_input},
+   {"lines", io_lines},
+   {"open", io_open},
+   {"output", io_output},
++#ifndef _KERNEL
+   {"popen", io_popen},
++#endif /* _KERNEL */
+   {"read", io_read},
+   {"tmpfile", io_tmpfile},
+   {"type", io_type},
+@@ -709,11 +729,15 @@ static const luaL_Reg iolib[] = {
+ */
+ static const luaL_Reg flib[] = {
+   {"close", io_close},
++#ifndef _KERNEL
+   {"flush", f_flush},
++#endif /* _KERNEL */
+   {"lines", f_lines},
+   {"read", f_read},
+   {"seek", f_seek},
++#ifndef _KERNEL
+   {"setvbuf", f_setvbuf},
++#endif /* _KERNEL */
+   {"write", f_write},
+   {"__gc", f_gc},
+   {"__tostring", f_tostring},
+@@ -730,6 +754,7 @@ static void createmeta (lua_State *L) {
+ }
+ 
+ 
++#ifndef _KERNEL
+ /*
+ ** function to (not) close the standard files stdin, stdout, and stderr
+ */
+@@ -753,15 +778,18 @@ static void createstdfile (lua_State *L, FILE *f, const char *k,
+   }
+   lua_setfield(L, -2, fname);  /* add file to module */
+ }
++#endif /* _KERNEL */
+ 
+ 
+ LUAMOD_API int luaopen_io (lua_State *L) {
+   luaL_newlib(L, iolib);  /* new module */
+   createmeta(L);
++#ifndef _KERNEL
+   /* create (and set) default files */
+   createstdfile(L, stdin, IO_INPUT, "stdin");
+   createstdfile(L, stdout, IO_OUTPUT, "stdout");
+   createstdfile(L, stderr, NULL, "stderr");
++#endif /* _KERNEL */
+   return 1;
+ }
+ 
+diff --git a/external/mit/lua/dist/src/lmathlib.c b/external/mit/lua/dist/src/lmathlib.c
+index 4d5b09e..aa08aed 100644
+--- a/external/mit/lua/dist/src/lmathlib.c
++++ b/external/mit/lua/dist/src/lmathlib.c
+@@ -21,8 +21,10 @@
+ #include "lualib.h"
+ 
+ 
++#ifndef _KERNEL
+ #undef PI
+ #define PI	(l_mathop(3.141592653589793238462643383279502884))
++#endif /* _KERNEL */
+ 
+ 
+ #if !defined(l_rand)		/* { */
+@@ -38,6 +40,7 @@
+ #endif				/* } */
+ 
+ 
++#ifndef _KERNEL
+ static int math_abs (lua_State *L) {
+   if (lua_isinteger(L, 1)) {
+     lua_Integer n = lua_tointeger(L, 1);
+@@ -124,6 +127,7 @@ static int math_ceil (lua_State *L) {
+   }
+   return 1;
+ }
++#endif /* _KERNEL */
+ 
+ 
+ static int math_fmod (lua_State *L) {
+@@ -136,13 +140,16 @@ static int math_fmod (lua_State *L) {
+     else
+       lua_pushinteger(L, lua_tointeger(L, 1) % d);
+   }
++#ifndef _KERNEL
+   else
+     lua_pushnumber(L, l_mathop(fmod)(luaL_checknumber(L, 1),
+                                      luaL_checknumber(L, 2)));
++#endif /* _KERNEL */
+   return 1;
+ }
+ 
+ 
++#ifndef _KERNEL
+ /*
+ ** next function does not use 'modf', avoiding problems with 'double*'
+ ** (which is not compatible with 'float*') when lua_Number is not
+@@ -209,6 +216,7 @@ static int math_rad (lua_State *L) {
+   lua_pushnumber(L, luaL_checknumber(L, 1) * (PI / l_mathop(180.0)));
+   return 1;
+ }
++#endif /* _KERNEL */
+ 
+ 
+ static int math_min (lua_State *L) {
+@@ -245,7 +253,11 @@ static int math_max (lua_State *L) {
+ */
+ static int math_random (lua_State *L) {
+   lua_Integer low, up;
++#ifndef _KERNEL
+   double r = (double)l_rand() * (1.0 / ((double)L_RANDMAX + 1.0));
++#else
++  long r = l_rand();
++#endif /* _KERNEL */
+   switch (lua_gettop(L)) {  /* check number of arguments */
+     case 0: {  /* no arguments */
+       lua_pushnumber(L, (lua_Number)r);  /* Number between 0 and 1 */
+@@ -267,7 +279,11 @@ static int math_random (lua_State *L) {
+   luaL_argcheck(L, low <= up, 1, "interval is empty"); 
+   luaL_argcheck(L, low >= 0 || up <= LUA_MAXINTEGER + low, 1,
+                    "interval too large");
++#ifndef _KERNEL
+   r *= (double)(up - low) + 1.0;
++#else
++  r %= (up - low) + 1;
++#endif /* _KERNEL */
+   lua_pushinteger(L, (lua_Integer)r + low);
+   return 1;
+ }
+@@ -295,6 +311,7 @@ static int math_type (lua_State *L) {
+ }
+ 
+ 
++#ifndef _KERNEL
+ /*
+ ** {==================================================================
+ ** Deprecated functions (for compatibility only)
+@@ -345,10 +362,12 @@ static int math_log10 (lua_State *L) {
+ 
+ #endif
+ /* }================================================================== */
++#endif /* _KERNEL */
+ 
+ 
+ 
+ static const luaL_Reg mathlib[] = {
++#ifndef _KERNEL
+   {"abs",   math_abs},
+   {"acos",  math_acos},
+   {"asin",  math_asin},
+@@ -359,19 +378,27 @@ static const luaL_Reg mathlib[] = {
+   {"exp",   math_exp},
+   {"tointeger", math_toint},
+   {"floor", math_floor},
++#endif /* _KERNEL */
+   {"fmod",   math_fmod},
++#ifndef _KERNEL
+   {"ult",   math_ult},
+   {"log",   math_log},
++#endif /* _KERNEL */
+   {"max",   math_max},
+   {"min",   math_min},
++#ifndef _KERNEL
+   {"modf",   math_modf},
+   {"rad",   math_rad},
++#endif /* _KERNEL */
+   {"random",     math_random},
+   {"randomseed", math_randomseed},
++#ifndef _KERNEL
+   {"sin",   math_sin},
+   {"sqrt",  math_sqrt},
+   {"tan",   math_tan},
++#endif /* _KERNEL */
+   {"type", math_type},
++#ifndef _KERNEL
+ #if defined(LUA_COMPAT_MATHLIB)
+   {"atan2", math_atan},
+   {"cosh",   math_cosh},
+@@ -384,6 +411,7 @@ static const luaL_Reg mathlib[] = {
+ #endif
+   /* placeholders */
+   {"pi", NULL},
++#endif /* _KERNEL */
+   {"huge", NULL},
+   {"maxinteger", NULL},
+   {"mininteger", NULL},
+@@ -396,8 +424,10 @@ static const luaL_Reg mathlib[] = {
+ */
+ LUAMOD_API int luaopen_math (lua_State *L) {
+   luaL_newlib(L, mathlib);
++#ifndef _KERNEL
+   lua_pushnumber(L, PI);
+   lua_setfield(L, -2, "pi");
++#endif /* _KERNEL */
+   lua_pushnumber(L, (lua_Number)HUGE_VAL);
+   lua_setfield(L, -2, "huge");
+   lua_pushinteger(L, LUA_MAXINTEGER);
+diff --git a/external/mit/lua/dist/src/loslib.c b/external/mit/lua/dist/src/loslib.c
+index 759dc2a..4df145e 100644
+--- a/external/mit/lua/dist/src/loslib.c
++++ b/external/mit/lua/dist/src/loslib.c
+@@ -13,10 +13,15 @@
+ 
+ 
+ #include <errno.h>
++#ifndef _KERNEL
+ #include <locale.h>
+ #include <stdlib.h>
+ #include <string.h>
++#else /* _KERNEL */
+ #include <time.h>
++#include <sys/time.h>
++#include <sys/proc.h>
++#endif /* _KERNEL */
+ 
+ #include "lua.h"
+ 
+@@ -129,6 +134,7 @@ static time_t l_checktime (lua_State *L, int arg) {
+ 
+ 
+ 
++#ifndef _KERNEL
+ static int os_execute (lua_State *L) {
+   const char *cmd = luaL_optstring(L, 1, NULL);
+   int stat = system(cmd);
+@@ -139,6 +145,7 @@ static int os_execute (lua_State *L) {
+     return 1;
+   }
+ }
++#endif /* _KERNEL */
+ 
+ 
+ static int os_remove (lua_State *L) {
+@@ -147,11 +154,13 @@ static int os_remove (lua_State *L) {
+ }
+ 
+ 
++#ifndef _KERNEL
+ static int os_rename (lua_State *L) {
+   const char *fromname = luaL_checkstring(L, 1);
+   const char *toname = luaL_checkstring(L, 2);
+   return luaL_fileresult(L, rename(fromname, toname) == 0, NULL);
+ }
++#endif /* _KERNEL */
+ 
+ 
+ static int os_tmpname (lua_State *L) {
+@@ -165,10 +174,12 @@ static int os_tmpname (lua_State *L) {
+ }
+ 
+ 
++#ifndef _KERNEL
+ static int os_getenv (lua_State *L) {
+   lua_pushstring(L, getenv(luaL_checkstring(L, 1)));  /* if NULL push nil */
+   return 1;
+ }
++#endif /* _KERNEL */
+ 
+ 
+ static int os_clock (lua_State *L) {
+@@ -177,6 +188,7 @@ static int os_clock (lua_State *L) {
+ }
+ 
+ 
++#ifndef _KERNEL
+ /*
+ ** {======================================================
+ ** Time/Date operations
+@@ -303,12 +315,14 @@ static int os_date (lua_State *L) {
+   }
+   return 1;
+ }
++#endif /* _KERNEL */
+ 
+ 
+ static int os_time (lua_State *L) {
+   time_t t;
+   if (lua_isnoneornil(L, 1))  /* called without args? */
+     t = time(NULL);  /* get current time */
++#ifndef _KERNEL
+   else {
+     struct tm ts;
+     luaL_checktype(L, 1, LUA_TTABLE);
+@@ -322,6 +336,7 @@ static int os_time (lua_State *L) {
+     ts.tm_isdst = getboolfield(L, "isdst");
+     t = mktime(&ts);
+   }
++#endif /* _KERNEL */
+   if (t != (time_t)(l_timet)t || t == (time_t)(-1))
+     luaL_error(L, "time result cannot be represented in this installation");
+   l_pushtime(L, t);
+@@ -339,6 +354,7 @@ static int os_difftime (lua_State *L) {
+ /* }====================================================== */
+ 
+ 
++#ifndef _KERNEL
+ static int os_setlocale (lua_State *L) {
+   static const int cat[] = {LC_ALL, LC_COLLATE, LC_CTYPE, LC_MONETARY,
+                       LC_NUMERIC, LC_TIME};
+@@ -362,18 +378,25 @@ static int os_exit (lua_State *L) {
+   if (L) exit(status);  /* 'if' to avoid warnings for unreachable 'return' */
+   return 0;
+ }
++#endif /* _KERNEL */
+ 
+ 
+ static const luaL_Reg syslib[] = {
+   {"clock",     os_clock},
++#ifndef _KERNEL
+   {"date",      os_date},
++#endif /* _KERNEL */
+   {"difftime",  os_difftime},
++#ifndef _KERNEL
+   {"execute",   os_execute},
+   {"exit",      os_exit},
+   {"getenv",    os_getenv},
++#endif /* _KERNEL */
+   {"remove",    os_remove},
++#ifndef _KERNEL
+   {"rename",    os_rename},
+   {"setlocale", os_setlocale},
++#endif /* _KERNEL */
+   {"time",      os_time},
+   {"tmpname",   os_tmpname},
+   {NULL, NULL}
+diff --git a/external/mit/lua/dist/src/luaconf.h b/external/mit/lua/dist/src/luaconf.h
+index 7d064b0..366b0c7 100644
+--- a/external/mit/lua/dist/src/luaconf.h
++++ b/external/mit/lua/dist/src/luaconf.h
+@@ -814,10 +814,6 @@
+ #define LUAI_TRY(L,c,a)		if (setjmp(&((c)->b)) == 0) { a }
+ #define luai_jmpbuf		label_t
+ 
+-/* time.h */
+-#include <sys/time.h>
+-#define time(p)			(time_uptime)
+-
+ /* stdio.h */
+ #define lua_writestring(s,l)	printf("%s", (s))
+ #define lua_writeline()		printf("\n")
+diff --git a/sys/modules/lua/Makefile b/sys/modules/lua/Makefile
+index 715c216..b6cff20 100644
+--- a/sys/modules/lua/Makefile
++++ b/sys/modules/lua/Makefile
+@@ -17,9 +17,11 @@ SRCS+=		lapi.c lcode.c lctype.c ldebug.c ldo.c ldump.c lfunc.c lgc.c \
+ 
+ # Lua stdlibs source code
+ SRCS+=		lauxlib.c lbaselib.c lbitlib.c lcorolib.c ldblib.c \
+-		lstrlib.c ltablib.c lutf8lib.c linit.c
++		lstrlib.c ltablib.c lutf8lib.c linit.c \
++		loslib.c liolib.c lmathlib.c
+ 
+-CPPFLAGS+=	-I${S}/../external/mit/lua/dist/src \
++CPPFLAGS+=	-Iinclude \
++		-I${S}/../external/mit/lua/dist/src \
+ 		-I${S}/sys
+ 
+ .include <bsd.kmodule.mk>
+diff --git a/sys/modules/lua/include/errno.h b/sys/modules/lua/include/errno.h
+new file mode 100644
+index 0000000..8fb01c9
+--- /dev/null
++++ b/sys/modules/lua/include/errno.h
+@@ -0,0 +1,8 @@
++#ifndef _ERRNO_H_
++#define _ERRNO_H_
++
++/* XXX find a better way to handle errors ;P */
++#define errno  -1
++#define strerror(errno) "kernel lua: error"
++
++#endif
+diff --git a/sys/modules/lua/include/math.h b/sys/modules/lua/include/math.h
+new file mode 100644
+index 0000000..cbc760b
+--- /dev/null
++++ b/sys/modules/lua/include/math.h
+@@ -0,0 +1,7 @@
++#ifndef _MATH_H_
++#define _MATH_H_
++
++#define HUGE_VAL (lua_Number) __builtin_huge_val()
++#define RANG_MAX 0x7fffffff
++
++#endif
+diff --git a/sys/modules/lua/include/rand.h b/sys/modules/lua/include/rand.h
+new file mode 100644
+index 0000000..4a10c11
+--- /dev/null
++++ b/sys/modules/lua/include/rand.h
+@@ -0,0 +1,59 @@
++/*
++ * Copyright (c) 2016 Guilherme Salazar. All rights reserved.
++ * Copyright (c) 1983, 1993
++ *	The Regents of the University of California.  All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ * 3. Neither the name of the University nor the names of its contributors
++ *    may be used to endorse or promote products derived from this software
++ *    without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
++ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
++ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
++ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
++ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
++ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
++ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
++ * SUCH DAMAGE.
++ */
++
++#ifndef _KRAND
++#define _KRAND
++
++static long rseed = 1l;
++
++inline static void srand(long seed) {
++	rseed = seed;
++}
++
++inline static long rand(void) {
++	long x, hi, lo, t;
++
++	/*
++	 * Compute x[n + 1] = (7^5 * x[n]) mod (2^31 - 1).
++	 * From "Random number generators: good ones are hard to find",
++	 * Park and Miller, Communications of the ACM, vol. 31, no. 10,
++	 * October 1988, p. 1195.
++	 */
++	x = rseed;
++	hi = x / 127773;
++	lo = x % 127773;
++	t = 16807 * lo - 2836 * hi;
++	if (t <= 0)
++		t += 0x7fffffff;
++	rseed = t;
++	return (t);
++}
++
++#endif
+diff --git a/sys/modules/lua/include/stdio.h b/sys/modules/lua/include/stdio.h
+new file mode 100644
+index 0000000..26f40de
+--- /dev/null
++++ b/sys/modules/lua/include/stdio.h
+@@ -0,0 +1,150 @@
++
++#ifndef _IO_H_
++#define _IO_H_
++
++#include <sys/stat.h>
++#include <sys/file.h>
++#include <sys/filedesc.h>
++#include <sys/syscallargs.h>
++#include <sys/vfs_syscalls.h>
++
++#include "sys/sys_generic.h"
++#include "tmpnam.h"
++
++#define EOF	-1
++#define BUFSIZ	1024
++#define FILE long
++
++#define stdin	NULL
++#define stdout	NULL
++#define stderr	NULL
++
++#define ferror(fd)	0
++#define fflush(fd)	0
++#define clearerr(fd)
++
++static int mode2flag(const char *mode) {
++	int flag;
++	if (*mode == 'r')
++		flag = O_RDONLY;
++	else if (*mode == 'w')
++		flag = O_WRONLY;
++	else if (*mode == 'a')
++		flag |= O_WRONLY | O_APPEND;
++	if (*(mode + 1) != '\0' && *(mode + 1) == '+') {
++		flag = O_RDWR;
++		if (*mode == 'a')
++			flag |= O_APPEND;
++		else if (*mode == 'w')
++			flag |= O_CREAT;
++	}
++	return flag;
++}
++
++inline static long open(const char *path, int flags) {
++	int fd;
++
++	if (fd_open(path, flags, ACCESSPERMS, &fd))
++		return -1;
++	return fd;
++
++}
++#define fopen(path, mode) (long*)open(path, mode2flag(mode))
++
++inline static int close(int fd) {
++	if (fd_getfile(fd) == NULL)
++		return EBADF;
++	return fd_close(fd);
++}
++#define fclose(fp)	close((long) fp)
++
++inline static ssize_t read(int fd, void *buf, size_t count) {
++	ssize_t ret;
++	file_t *fp;
++
++	if ((fp = fd_getfile(fd)) == NULL)
++		return (EBADF);
++
++	if (_dofileread(fd, fp, buf, count, &fp->f_offset, FOF_UPDATE_OFFSET,
++	    &ret))
++		return -1;
++	return ret;
++
++}
++#define fread(buff, sz, nb, fp)	read((long) fp, buff, sz * nb)
++
++inline static ssize_t write(int fd, const void *buf, size_t count) {
++	ssize_t ret;
++	file_t *fp;
++
++	if ((fp = fd_getfile(fd)) == NULL)
++	return (EBADF);
++
++	if (_dofilewrite(fd, fp, buf, count, &fp->f_offset, FOF_UPDATE_OFFSET,
++	    &ret))
++		return -1;
++	return ret;
++
++}
++#define fwrite(buff, sz, nb, fp)	write((long) fp, buff, sz * nb)
++
++inline static int _fseek(long fd, off_t offset, int whence) {
++	struct sys_lseek_args sargs;
++	register_t ret = -1;
++
++	memset(&sargs, 0, sizeof sargs);
++	SCARG(&sargs, fd) = fd;
++	SCARG(&sargs, PAD) = 0;
++	SCARG(&sargs, offset) = offset;
++	SCARG(&sargs, whence) = whence;
++
++	sys_lseek(curlwp, &sargs, &ret);
++	return ret;
++}
++#define fseek(fp, offset, whence) _fseek((long) fp, offset, whence)
++#define ftell(fp) fseek((long)fp, 0, SEEK_CUR)
++
++inline static int _getc(int fd) {
++	int c;
++	if (read(fd, &c, 1) != 1)
++		c = -1;
++	return c;
++}
++
++#define getc(fp)	_getc((long)fp)
++
++#define ungetc(ch, fd) fseek((long)fd, -1, SEEK_CUR)
++
++inline static int _eof(int fd) {
++	int c = getc(fd) == -1;
++	if (c) fseek(fd, -1, SEEK_CUR);
++	return c;
++}
++#define feof(fp) _eof((long)fp)
++
++inline static int remove(const char *path) {
++	return do_sys_unlink(path, UIO_SYSSPACE);
++}
++
++#define fprintf(fp, fmt, val) \
++		({ \
++			char s[strlen(fmt)] = {'\0'}; \
++			int l = snprintf(s, sizeof s, fmt, val); \
++			fwrite(s, sizeof s, 1, (long) fp); \
++		})
++
++#define L_tmpnam    32
++
++#define tmpfile() \
++		({ \
++			char b[L_tmpnam] = {'\0'}; \
++			fopen(tmpnam(b), "w+"); \
++		})
++
++#define tmpnam(nam) \
++		({ \
++			strcpy(nam, "/tmp/klua_XXXXXX"); \
++			ktmpnam(nam); \
++		})
++
++#endif
+diff --git a/sys/modules/lua/include/stdlib.h b/sys/modules/lua/include/stdlib.h
+new file mode 100644
+index 0000000..b309aff
+--- /dev/null
++++ b/sys/modules/lua/include/stdlib.h
+@@ -0,0 +1,6 @@
++#ifndef _STDLIB_H
++#define _STDLIB_H
++
++#include "rand.h"
++
++#endif
+diff --git a/sys/modules/lua/include/sys/sys_generic.h b/sys/modules/lua/include/sys/sys_generic.h
+new file mode 100644
+index 0000000..da5dab1
+--- /dev/null
++++ b/sys/modules/lua/include/sys/sys_generic.h
+@@ -0,0 +1,178 @@
++/*-
++ * Copyright (c) 2016 Guilherme Salazar <salazar@NetBSD.org>
++ * Copyright (c) 2007, 2008, 2009 The NetBSD Foundation, Inc.
++ * All rights reserved.
++ *
++ * This code is derived from software contributed to The NetBSD Foundation
++ * by Andrew Doran.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
++ * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
++ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
++ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
++ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++
++/*
++ * Copyright (c) 1982, 1986, 1989, 1993
++ *	The Regents of the University of California.  All rights reserved.
++ * (c) UNIX System Laboratories, Inc.
++ * All or some portions of this file are derived from material licensed
++ * to the University of California by American Telephone and Telegraph
++ * Co. or Unix System Laboratories, Inc. and are reproduced herein with
++ * the permission of UNIX System Laboratories, Inc.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ * 3. Neither the name of the University nor the names of its contributors
++ *    may be used to endorse or promote products derived from this software
++ *    without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
++ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
++ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
++ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
++ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
++ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
++ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
++ * SUCH DAMAGE.
++ *
++ *	@(#)sys_generic.c	8.9 (Berkeley) 2/14/95
++ */
++
++/*
++ * System calls relating to files; those have been modified to be used in
++ * kernel Lua; the main change is in the uio struct, which originally had its
++ * uio_vmspace field set to the process' vmspace; in kernel we need to set it
++ * to vmspace_kernel() instead
++ */
++
++#ifndef _LUA_SYS_GENERIC_
++#define _LUA_SYS_GENERIC_
++
++#include <sys/filedesc.h>
++#include <sys/vnode.h>
++
++inline static int _dofileread(int fd, struct file *fp, void *buf, size_t nbyte,
++	off_t *offset, int flags, register_t *retval) {
++	struct iovec aiov;
++	struct uio auio;
++	size_t cnt;
++	int error;
++	lwp_t *l;
++
++	l = curlwp;
++
++	aiov.iov_base = (void *)buf;
++	aiov.iov_len = nbyte;
++	auio.uio_iov = &aiov;
++	auio.uio_iovcnt = 1;
++	auio.uio_resid = nbyte;
++	auio.uio_rw = UIO_READ;
++#ifndef _LUA_SYS_GENERIC_
++	auio.uio_vmspace = l->l_proc->p_vmspace;
++#else
++	auio.uio_vmspace = vmspace_kernel();
++#endif
++
++	/*
++	 * Reads return ssize_t because -1 is returned on error.  Therefore
++	 * we must restrict the length to SSIZE_MAX to avoid garbage return
++	 * values.
++	 */
++	if (auio.uio_resid > SSIZE_MAX) {
++		error = EINVAL;
++		goto out;
++	}
++
++	cnt = auio.uio_resid;
++	error = (*fp->f_ops->fo_read)(fp, offset, &auio, fp->f_cred, flags);
++	if (error)
++		if (auio.uio_resid != cnt && (error == ERESTART ||
++		    error == EINTR || error == EWOULDBLOCK))
++			error = 0;
++	cnt -= auio.uio_resid;
++#ifndef _LUA_SYS_GENERIC_
++	ktrgenio(fd, UIO_READ, buf, cnt, error);
++#endif
++	*retval = cnt;
++ out:
++	fd_putfile(fd);
++	return (error);
++}
++
++inline static int _dofilewrite(int fd, struct file *fp, const void *buf,
++	size_t nbyte, off_t *offset, int flags, register_t *retval) {
++	struct iovec aiov;
++	struct uio auio;
++	size_t cnt;
++	int error;
++
++	aiov.iov_base = __UNCONST(buf);		/* XXXUNCONST kills const */
++	aiov.iov_len = nbyte;
++	auio.uio_iov = &aiov;
++	auio.uio_iovcnt = 1;
++	auio.uio_resid = nbyte;
++	auio.uio_rw = UIO_WRITE;
++#ifndef _LUA_SYS_GENERIC_
++	auio.uio_vmspace = curproc->p_vmspace;
++#else
++	auio.uio_vmspace = vmspace_kernel();
++#endif
++	/*
++	 * Writes return ssize_t because -1 is returned on error.  Therefore
++	 * we must restrict the length to SSIZE_MAX to avoid garbage return
++	 * values.
++	 */
++	if (auio.uio_resid > SSIZE_MAX) {
++		error = EINVAL;
++		goto out;
++	}
++
++	cnt = auio.uio_resid;
++	error = (*fp->f_ops->fo_write)(fp, offset, &auio, fp->f_cred, flags);
++	if (error) {
++		if (auio.uio_resid != cnt && (error == ERESTART ||
++		    error == EINTR || error == EWOULDBLOCK))
++			error = 0;
++		if (error == EPIPE && !(fp->f_flag & FNOSIGPIPE)) {
++			mutex_enter(proc_lock);
++			psignal(curproc, SIGPIPE);
++			mutex_exit(proc_lock);
++		}
++	}
++	cnt -= auio.uio_resid;
++#ifndef _LUA_SYS_GENERIC_
++	ktrgenio(fd, UIO_WRITE, buf, cnt, error);
++#endif
++	*retval = cnt;
++ out:
++	fd_putfile(fd);
++	return (error);
++}
++
++#endif
+diff --git a/sys/modules/lua/include/time.h b/sys/modules/lua/include/time.h
+new file mode 100644
+index 0000000..9301f95
+--- /dev/null
++++ b/sys/modules/lua/include/time.h
+@@ -0,0 +1,28 @@
++#ifndef _TIME_H_
++#define _TIME_H_
++
++#include <sys/time.h>
++
++#define difftime(t1, t2) ((t1) - (t2))
++
++/* clock here returns milliseconds, not ticks count */
++#define clock() \
++		({ \
++			struct rusage ru; \
++			getrusage1(curlwp->l_proc, RUSAGE_SELF, &ru); \
++			(clock_t)((ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) * 1000 \
++					+ (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec) / 1000); \
++		})
++#define CLOCKS_PER_SEC 1
++
++#define time(p) \
++		({ \
++			struct bintime t; \
++			bintime(&t); \
++			if (p != NULL) *(time_t*)p = t.sec; \
++			else t.sec; \
++			t.sec; \
++		})
++
++
++#endif
+diff --git a/sys/modules/lua/include/tmpnam.h b/sys/modules/lua/include/tmpnam.h
+new file mode 100644
+index 0000000..6019ce3
+--- /dev/null
++++ b/sys/modules/lua/include/tmpnam.h
+@@ -0,0 +1,50 @@
++/*
++ * Copyright (c) 2015-2016 Guilherme Salazar
++ * Copyright (c) 1983-2015 Regents of the University of California.
++ * All rights reserved.  The Berkeley software License Agreement
++ * specifies the terms and conditions for redistribution.
++ */
++
++/*
++ * Obtained and adapted from
++ * http://www.retro11.de/ouxr/43bsd/usr/src/lib/libc/gen/mkstemp.c.html
++ */
++
++#ifndef _KTMPNAM_H
++#define _KTMPNAM_H
++
++#include <sys/filedesc.h>
++#include <sys/stat.h>
++#include <sys/fcntl.h>
++
++static inline char* ktmpnam(char *tmp) {
++	long  rnd;
++	char  ch, *s;
++	int   fd;
++
++	s   = tmp;
++	rnd = random();
++
++	while (*s++)
++		;
++
++	s--;
++	while (*--s == 'X') {
++		*s = (rnd % 10) + '0';
++		rnd /= 10;
++	}
++	s++;
++
++	ch = 'a';
++	while ((fd_open(tmp, O_CREAT|O_EXCL|O_RDWR, ALLPERMS, &fd)) != 0) {
++		if (ch == 'z')
++			return NULL;
++		*s = ch++;
++	}
++	if (fd_getfile(fd) != NULL)
++		fd_close(fd);
++
++	return tmp;
++}
++
++#endif

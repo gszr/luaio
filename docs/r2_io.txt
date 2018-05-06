@@ -1,0 +1,159 @@
+I/O System
+==========
+
+Design
+------
+
+I/O in Unix is based on an uninterpreted byte-based model. Bytes can be handled
+-- read or written -- sequentially or randomly. The kernel does not impose any
+structure on I/O; text files, for instance, are sequences of ASCII characters
+marked with the EOL character, but the kernel only sees sequences of data bytes
+or I/O streams.
+
+I/O streams are referenced by a small integer value, a file descriptor, which
+maps to a kernel object created with specialized system calls, depending on the
+type of object. Files, sockets, pipes, and others are referenced by file
+descriptors.
+
+The kernel uses a per-process table to map a file descriptor into an internal
+representation; the descriptor is an index of this table.
+
+Implementation
+--------------
+
+The diagram below shows the overall structure of the I/O subsystem. For
+simplification purposes, tier 4 is restricted to files and IPC; tier 5 IPC is
+further restricted to sockets, but they include other objects and mechanisms.
+
+
+     (1)                 (2)               (3)          (4)           (5)
+                                                      -------        -------
+                                                     | Files | ---> | vnode |
+ ------------        ------------        -------   /  -------        -------
+|    File    |      | Descriptor |      | File  | /     ...       struct vnode
+| descriptor | ---> |   table    | ---> | entry | \   -------        --------
+ ------------        -------------       -------   \ |  IPC  | ---> | socket |
+                    struct filedesc     struct file   -------       --------
+                                                                 struct socket
+
+As noted above, a file descriptor (1) is an index into a descriptor table (2);
+the table entry referenced by the descripto points to a file entry (3), which
+keeps a pointer to the underlying object referenced by the file descriptor (4).
+
+Digging deeper into the implementation, `struct filedesc' is in
+`src/sys/sys/filedesc.h'. Below is a snippet of `struct filedesc':
+
+  struct filedesc {
+    ...
+    fdtab_t * volatile fd_dt;
+    ...
+  };
+
+  typedef struct fdtab {
+    u_int dt_nfiles; /* number of open files allocated */
+    ...
+    fdfile_t *dt_ff[NDFILE]; /* file structures for open fds */
+  } fdtab_t;
+
+  typedef struct fdfile {
+    ...
+    struct file *ff_file; /* pointer to file if open */
+    ...
+  } fdfile_t;
+
+A file, similar to a vnode, is an object-oriented data structure: it has a
+type, data fields, and an array of generic operations that can be applied to
+the file.
+
+A file descriptor is an index into `dt_ff', which is an array of open files.
+`struct file' is defined in `src/sys/sys/file.h':
+
+  struct file {
+    ...
+    struct fileops *f_ops;
+    union file_data f_undata;
+    ...
+  };
+
+f_ops is an array of operations that can be applied to a file, be it a file
+system object, a socket, a pipe, or an event queue.
+
+  struct fileops {
+    int (*fo_read)  (struct file *, off_t *, struct uio *, kauth_cred_t, int);
+    int (*fo_write) (struct file *, off_t *, kauth_cred_t, int);
+    ...
+    int (*fo_poll)  (struct file *, int);
+    int (*fo_stat)  (struct file *, struct stat *);
+    int (*fo_close) (struct file *);
+    ...
+  };
+
+The union `f_undata' contains descriptor specific data:
+
+  union file_data {
+    struct vnode *fd_vp;
+    struct socket *fd_so;
+    struct pipe *fd_pipe;
+    ...
+  };
+
+An `open' operation is not in the operations array.The various underlying
+objects that can be referenced by a file descriptor have different
+characteristics; although all of them are referred by file descriptors, vnodes 
+are created by open(2), sockets are created by socket(2), pipes by pipe(2),
+and so on. 
+
+
+API proposal
+============
+
+We have previously discussed the implementation of bindings in a lower-level,
+in terms of vnodes and sockets -- corresponding to the tier 5 of the diagram.
+
+I propose we provide a kernel Lua interface similar to that of system calls,
+on top of the descriptor interface -- roughly, tier 1 of the diagram; namely, 
+for each type of object referenced by a file descriptor, such as files and 
+sockets, we should provide a corresponding function to open a descriptor. For
+files, it would follow the open(2) contract; for sockets, it would follow 
+socket(2).
+
+* open(path, flags, perms)
+* socket(domain, type, protocol)
+
+One of the advantages of sitting above the descriptor layer is extensibility:
+access to other I/O mechanisms may also be provided with few additions. For
+instance, pipes can be provided as long as the corresponding `pipe' function is
+implemented to create a descriptor for a pipe; similarly, the API can be
+extended to support message queues and kernel event queues.
+
+Read and write operations would make use of the dofileread(9) API, which
+provides high-level file operations for read(2)/write(2) and their scatter-
+gather variations readv(2)/writev(2).
+
+* read
+* write
+
+The socket interface would require more functions, depending on the semantics
+of communication -- e.g., datagram or stream-oriented. 
+
+* bind
+* connect
+* listen
+* accept
+* shutdown
+
+Further, a richer set of operations for sending and receiving messages, in
+addition to read/write and readv/writev, may also be provided:
+
+* recv/send
+* recvfrom/sendto
+* recvmsg/sendmsg
+
+All of the sockets API use functions declared in `src/sys/sys/socketvar.h'.
+Network-related API should be examined in depth in another document.
+
+REFERENCES
+
+[1] "The Design and Implementation of the FreeBSD Operating System",
+    McKusick, Marshall et al.
+[2] NetBSD-current sources

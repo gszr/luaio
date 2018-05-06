@@ -1,0 +1,37 @@
+Schedule and Milestones
+=======================
+
+* Community bonding: Apr 23 - May 23
+  Investigation of kernel APIs to be used and experimentation
+  * Deliverables
+    [1] Write-ups about the subsystems that were studied
+    [2] Any code writte for experimentation purposes
+
+* Generic I/O libs and bindings: May 24 - Jun 7
+  Implementation of I/O libraries and bindings to kernel Lua
+  * Deliverables
+    [1] I/O library built on top of kernel files API, supporting regular files
+        and operations that are used by other types of file supported by the
+        kernel (e.g., sockets)
+    [2] Kernel Lua loadable module: a loadable kernel module built on top of [1]
+    [3] Port of standard Lua 'io' module: finish porting the 'io' module using
+        [1]
+
+* Sockets library and bindings (1): Jun 8 - Jun 22
+  Implementation of an API for datagram (UDP) sockets
+  * Deliverables
+    [1] UDP sockets library built on top of kernel sockets API
+    [2] Kernel Lua loadable module
+
+* Sockets library and bindings (2): Jun 23 - Jul 7
+  Implementation of an API for stream (TCP) sockets
+  * Deliverables
+    [1] TCP sockets library built on top of kernel sockets API
+    [2] Kernel Lua loadable module
+
+* Benchmarks: Jul 8 - Jul 31
+  Develop benchmarks to kernel Lua bindings
+
+* Polishing: Aug 1 - Aug 23
+  Refactor code, review documentation, and fix any pending issues
+
